@@ -1,8 +1,8 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.express as px
 from io import StringIO
 from datetime import datetime
 
@@ -18,7 +18,8 @@ def load_data(file):
     return df
 
 def add_sidebar_filters(df):
-    st.sidebar.header("Filters")
+    st.sidebar.header("🔎 Filters")
+    st.sidebar.caption("Use these controls to filter and explore your data.")
     # Date range
     min_date = pd.to_datetime(df["Date"].min())
     max_date = pd.to_datetime(df["Date"].max())
@@ -54,10 +55,10 @@ def kpi_cards(df):
     rain = df["Rainfall_mm"].sum() if "Rainfall_mm" in df else np.nan
     do = df["Dissolved_Oxygen_mg_L"].mean() if "Dissolved_Oxygen_mg_L" in df else np.nan
 
-    col1.metric("Avg Water Level (m)", f"{wl:.3f}" if pd.notna(wl) else "—")
-    col2.metric("Avg Temperature (°C)", f"{temp:.2f}" if pd.notna(temp) else "—")
-    col3.metric("Total Rainfall (mm)", f"{rain:.1f}" if pd.notna(rain) else "—")
-    col4.metric("Avg Dissolved O₂ (mg/L)", f"{do:.2f}" if pd.notna(do) else "—")
+    col1.metric("🌊 Avg Water Level (m)", f"{wl:.3f}" if pd.notna(wl) else "—")
+    col2.metric("🌡️ Avg Temperature (°C)", f"{temp:.2f}" if pd.notna(temp) else "—")
+    col3.metric("🌧️ Total Rainfall (mm)", f"{rain:.1f}" if pd.notna(rain) else "—")
+    col4.metric("🫧 Avg Dissolved O₂ (mg/L)", f"{do:.2f}" if pd.notna(do) else "—")
 
 def time_series_section(df, y_cols):
     st.subheader("Time Series")
@@ -65,24 +66,15 @@ def time_series_section(df, y_cols):
         st.info("Select at least one numeric column from the sidebar.")
         return
     for col in y_cols:
-        fig, ax = plt.subplots()
-        ax.plot(df["Date"], df[col])
-        ax.set_title(col)
-        ax.set_xlabel("Date")
-        ax.set_ylabel(col)
-        ax.grid(True, alpha=0.3)
-        st.pyplot(fig, clear_figure=True)
+        fig = px.line(df, x="Date", y=col, title=col)
+        st.plotly_chart(fig, use_container_width=True)
 
 def rainfall_bar(df):
     if "Rainfall_mm" not in df:
         return
     st.subheader("Rainfall (Bar)")
-    fig, ax = plt.subplots()
-    ax.bar(df["Date"], df["Rainfall_mm"])
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Rainfall (mm)")
-    ax.set_title("Rainfall Over Time")
-    st.pyplot(fig, clear_figure=True)
+    fig = px.bar(df, x="Date", y="Rainfall_mm", labels={"Rainfall_mm": "Rainfall (mm)"}, title="Rainfall Over Time")
+    st.plotly_chart(fig, use_container_width=True)
 
 def correlation_heatmap(df):
     st.subheader("Correlation (Pearson)")
@@ -91,35 +83,21 @@ def correlation_heatmap(df):
         st.info("No numeric columns to compute correlations.")
         return
     corr = num_df.corr()
-    fig, ax = plt.subplots()
-    cax = ax.imshow(corr, interpolation="nearest")
-    ax.set_title("Correlation Heatmap")
-    ax.set_xticks(range(len(corr.columns)))
-    ax.set_yticks(range(len(corr.columns)))
-    ax.set_xticklabels(corr.columns, rotation=45, ha="right")
-    ax.set_yticklabels(corr.columns)
-    fig.colorbar(cax)
-    st.pyplot(fig, clear_figure=True)
+    fig = px.imshow(corr, text_auto=True, color_continuous_scale="Blues", title="Correlation Heatmap")
+    st.plotly_chart(fig, use_container_width=True)
 
 def scatter_matrix(df):
-    st.subheader("Scatter Plots")
+    st.subheader("Scatter Matrix")
     cols = st.multiselect(
-        "Select up to 3 variables for pairwise scatter (x vs y):",
+        "Select variables for scatter matrix:",
         [c for c in df.columns if c not in ["Date"] and pd.api.types.is_numeric_dtype(df[c])],
         default=["Rainfall_mm", "Water_Level_m"] if "Rainfall_mm" in df and "Water_Level_m" in df else []
     )
     if len(cols) >= 2:
-        for i in range(len(cols)):
-            for j in range(i+1, len(cols)):
-                x, y = cols[i], cols[j]
-                fig, ax = plt.subplots()
-                ax.scatter(df[x], df[y], alpha=0.6)
-                ax.set_xlabel(x)
-                ax.set_ylabel(y)
-                ax.set_title(f"{y} vs {x}")
-                st.pyplot(fig, clear_figure=True)
+        fig = px.scatter_matrix(df, dimensions=cols)
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.caption("Select at least two variables to plot pairwise scatter.")
+        st.caption("Select at least two variables to plot scatter matrix.")
 
 def anomaly_detection(df):
     st.subheader("Simple Anomaly Detection (Z-score of rolling residuals)")
@@ -159,8 +137,61 @@ def missingness(df):
     miss.columns = ["Column", "Missing_Count"]
     st.dataframe(miss, use_container_width=True)
 
+def data_preview(df):
+    st.subheader("Data Preview")
+    st.dataframe(df.head(20), use_container_width=True)
+
+def column_mapper(df):
+    st.sidebar.subheader("Column Mapper")
+    expected = ["Date", "Water_Level_m", "Temperature_C", "Rainfall_mm", "Dissolved_Oxygen_mg_L"]
+    mapping = {}
+    for col in expected:
+        options = [None] + list(df.columns)
+        selected = st.sidebar.selectbox(f"Map '{col}' to:", options, index=options.index(col) if col in df.columns else 0)
+        if selected:
+            mapping[col] = selected
+    df = df.rename(columns={v: k for k, v in mapping.items() if v})
+    return df
+
+def local_css():
+    st.markdown("""
+        <style>
+        .stMetric { font-size: 1.3rem; font-weight: bold; }
+        .block-container { padding-top: 2rem; }
+        .stButton>button { background-color: #0099ff; color: white; border-radius: 8px; }
+        .stTabs [data-baseweb="tab"] { font-size: 1.1rem; }
+        </style>
+    """, unsafe_allow_html=True)
+
+def hero_banner():
+    st.markdown(
+        """
+        <div style="background: linear-gradient(90deg, #0099ff 0%, #00cc99 100%); padding: 2rem 1rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h1 style="color: white; margin-bottom: 0.5rem;">💧 DWLR Water Logger Dashboard</h1>
+            <p style="color: white; font-size: 1.2rem;">
+                Explore water-level and quality metrics interactively.<br>
+                <span style="font-size: 1rem;">Powered by Streamlit</span>
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+def footer():
+    st.markdown(
+        """
+        <hr style="margin-top:2rem;">
+        <div style="text-align:center; color:gray; font-size:0.9rem;">
+            Made with ❤️ using Streamlit | <a href="https://github.com/aditya" style="color:gray;">GitHub</a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 def main():
-    st.title("DWLR (Water Logger) Dashboard")
+    local_css()
+    hero_banner()
+    st.title("💧 DWLR (Water Logger) Dashboard")
     st.caption("Interactive exploration of water-level and quality metrics.")
 
     # Data source: upload or bundled sample file
@@ -179,28 +210,24 @@ def main():
         st.error("The dataset must contain a 'Date' column.")
         st.stop()
 
-    # Sidebar filters
+    # Data preview
+    data_preview(df)
+    df = column_mapper(df)
     df_filt, y_cols = add_sidebar_filters(df)
-
-    # KPI cards
     kpi_cards(df_filt)
 
-    # Layout two columns for main visuals
-    colA, colB = st.columns([2, 1])
-    with colA:
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Time Series", "🌧️ Rainfall & Missing", "🔗 Correlation", "🔍 Anomalies & Scatter"])
+
+    with tab1:
         time_series_section(df_filt, y_cols)
-    with colB:
+    with tab2:
         rainfall_bar(df_filt)
         missingness(df_filt)
-
-    st.divider()
-    correlation_heatmap(df_filt)
-
-    st.divider()
-    scatter_matrix(df_filt)
-
-    st.divider()
-    anomaly_detection(df_filt)
+    with tab3:
+        correlation_heatmap(df_filt)
+    with tab4:
+        scatter_matrix(df_filt)
+        anomaly_detection(df_filt)
 
     st.divider()
     data_download(df_filt)
@@ -211,6 +238,7 @@ def main():
             "- **Anomaly Detection** uses a 14-day rolling mean and residual z-scores.\n"
             "- If your schema differs, rename columns to match these names or adjust the code."
         )
+    footer()
 
 if __name__ == "__main__":
     main()
