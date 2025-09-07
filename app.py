@@ -181,7 +181,7 @@ def footer():
         """
         <hr style="margin-top:2rem;">
         <div style="text-align:center; color:gray; font-size:0.9rem;">
-            Made with ❤️ using Streamlit | <a href="https://github.com/aditya" style="color:gray;">GitHub</a>
+            Made with ❤️ using Streamlit | <a href="#" style="color:gray;">GitHub</a>
         </div>
         """,
         unsafe_allow_html=True
