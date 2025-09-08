@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.express as px
 from io import StringIO
 from datetime import datetime
@@ -259,14 +258,61 @@ def government_notifications(df):
     # Add more rules as needed
 
 def transparency_panel(df):
-    st.subheader("Transparency Panel")
-    st.write("Summary of water usage, anomalies, and alerts for citizens:")
-    st.write(f"- **Lowest water level:** {df['Water_Level_m'].min():.2f} m")
-    st.write(f"- **Total rainfall:** {df['Rainfall_mm'].sum():.1f} mm")
-    st.write(f"- **Anomalies detected:** {df['Water_Level_m'].isna().sum()} missing values")
+    st.markdown(
+        """
+        <div style="
+            background: linear-gradient(90deg, #00cc99 0%, #0099ff 100%);
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        ">
+            <h2 style="color: white; margin-bottom: 0.5rem;">🔎 Transparency Panel</h2>
+            <ul style="color: white; font-size: 1.15rem; margin-left: 1rem;">
+                <li><b>Lowest water level:</b> {low:.2f} m</li>
+                <li><b>Total rainfall:</b> {rain:.1f} mm</li>
+                <li><b>Anomalies detected:</b> {anom} missing values</li>
+            </ul>
+            <p style="color: #f8f8f8; font-size: 1rem; margin-top: 0.5rem;">
+                📢 <b>Stay informed!</b> This panel summarizes key alerts and water usage for your farm.
+            </p>
+        </div>
+        """.format(
+            low=df['Water_Level_m'].min() if "Water_Level_m" in df else 0,
+            rain=df['Rainfall_mm'].sum() if "Rainfall_mm" in df else 0,
+            anom=df['Water_Level_m'].isna().sum() if "Water_Level_m" in df else 0
+        ),
+        unsafe_allow_html=True
+    )
+
+def crop_suggestions(df):
+    wl = df["Water_Level_m"].mean() if "Water_Level_m" in df else None
+    rain = df["Rainfall_mm"].mean() if "Rainfall_mm" in df else None
+    temp = df["Temperature_C"].mean() if "Temperature_C" in df else None
+
+    crops = []
+    if wl is not None and rain is not None:
+        if wl > 3 and rain > 80:
+            crops = ["Paddy (Rice)", "Sugarcane", "Banana"]
+        elif wl > 2 and rain > 40:
+            crops = ["Maize", "Groundnut", "Cotton", "Pulses"]
+        elif wl <= 2 or rain <= 40:
+            crops = ["Millets (Sorghum, Pearl Millet)", "Chickpea", "Sunflower"]
+    if temp is not None and temp > 32:
+        crops.append("Chili")
+        crops.append("Okra")
+        crops.append("Sweet Potato")
+
+    if crops:
+        st.subheader("🌱 Crop Suggestions")
+        st.success(f"Based on current water, rainfall, and temperature, you can consider growing: **{', '.join(crops)}**")
+    else:
+        st.subheader("🌱 Crop Suggestions")
+        st.info("Not enough data to suggest crops. Please check your dataset.")
 
 def farmer_view(df, df_filt, y_cols):
     st.header("👩‍🌾 Farmer Dashboard")
+    transparency_panel(df_filt)  # Panel at the top
     st.info("Get alerts on low water, cost-saving tips, and pump usage insights.", icon="🚜")
     kpi_cards(df_filt)
     low_water_alert(df_filt)
@@ -274,12 +320,16 @@ def farmer_view(df, df_filt, y_cols):
     if "Water_Level_m" in y_cols:
         fig = px.line(df_filt, x="Date", y="Water_Level_m", title="Water Level (m)")
         st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Rainfall Over Time")
+    if "Rainfall_mm" in df_filt.columns:
+        fig_rain = px.bar(df_filt, x="Date", y="Rainfall_mm", labels={"Rainfall_mm": "Rainfall (mm)"}, title="Rainfall Over Time")
+        st.plotly_chart(fig_rain, use_container_width=True)
+    crop_suggestions(df_filt)  # <-- Add this line
     historical_comparison(df_filt)
     st.subheader("Pump Usage Tips")
     st.markdown("- **Save costs:** Run pumps only when water level is above safe threshold.")
     st.markdown("- **Alert:** If water level drops below 1.5m, consider reducing extraction.")
     future_prediction(df_filt)
-    transparency_panel(df_filt)
 
 def researcher_view(df, df_filt, y_cols):
     st.header("🔬 Researcher Dashboard")
