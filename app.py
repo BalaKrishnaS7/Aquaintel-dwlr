@@ -351,6 +351,42 @@ def researcher_view(df, df_filt, y_cols):
         government_notifications(df_filt)
     data_download(df_filt)
 
+def govt_view(df, df_filt, y_cols):
+    st.header("🏛️ Government Dashboard")
+    government_notifications(df_filt)
+    illegal_extraction_detection(df_filt)
+    st.subheader("Regional Water Statistics")
+    if "Water_Level_m" in df_filt and "Rainfall_mm" in df_filt:
+        stats = {
+            "Lowest Water Level (m)": f"{df_filt['Water_Level_m'].min():.2f}",
+            "Avg Water Level (m)": f"{df_filt['Water_Level_m'].mean():.2f}",
+            "Total Rainfall (mm)": f"{df_filt['Rainfall_mm'].sum():.1f}",
+            "Avg Rainfall (mm)": f"{df_filt['Rainfall_mm'].mean():.1f}",
+        }
+        for k, v in stats.items():
+            st.metric(k, v)
+    st.subheader("Water Level Trend")
+    if "Water_Level_m" in df_filt:
+        fig = px.line(df_filt, x="Date", y="Water_Level_m", title="Water Level Over Time")
+        st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Rainfall Trend")
+    if "Rainfall_mm" in df_filt:
+        fig = px.bar(df_filt, x="Date", y="Rainfall_mm", title="Rainfall Over Time")
+        st.plotly_chart(fig, use_container_width=True)
+
+def citizen_view(df, df_filt, y_cols):
+    st.header("👥 Citizen Dashboard")
+    transparency_panel(df_filt)
+    st.subheader("Water Level Trend")
+    if "Water_Level_m" in df_filt:
+        fig = px.line(df_filt, x="Date", y="Water_Level_m", title="Water Level Over Time")
+        st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Rainfall Trend")
+    if "Rainfall_mm" in df_filt:
+        fig = px.bar(df_filt, x="Date", y="Rainfall_mm", title="Rainfall Over Time")
+        st.plotly_chart(fig, use_container_width=True)
+    st.info("This dashboard provides a transparent summary of water and rainfall data for your area.")
+
 def main():
     local_css()
     hero_banner()
@@ -358,7 +394,10 @@ def main():
 
     # Sidebar: User type selection at the top
     st.sidebar.markdown("## 👤 Dashboard View")
-    user_type = st.sidebar.selectbox("Choose your dashboard view", ["Farmer", "Researcher"])
+    user_type = st.sidebar.selectbox(
+        "Choose your dashboard view",
+        ["Farmer", "Government", "Researcher", "Citizen"]
+    )
 
     # Sidebar: Data source selection
     st.sidebar.markdown("---")
@@ -388,14 +427,17 @@ def main():
     dataset_info(df)
 
     # Sidebar: Filters (date, resample, variables)
-    # The controls are now grouped under the previous sections
     df_filt, y_cols = add_sidebar_filters(df)
 
     # Main dashboard view
     if user_type == "Farmer":
         farmer_view(df, df_filt, y_cols)
-    else:
+    elif user_type == "Government":
+        govt_view(df, df_filt, y_cols)
+    elif user_type == "Researcher":
         researcher_view(df, df_filt, y_cols)
+    elif user_type == "Citizen":
+        citizen_view(df, df_filt, y_cols)
 
     st.divider()
     with st.expander("About / Tips"):
