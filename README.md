@@ -1,4 +1,4 @@
-# DWLR Dashboard (Streamlit)
+# AquaIntel (DWLR Dashboard)  
 
 A Streamlit app to explore and visualize DWLR sensor data.
 
