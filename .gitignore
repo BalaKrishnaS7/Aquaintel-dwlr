@@ -1,0 +1,29 @@
+# --------------------------------------
+# Python Cache / Compiled Files
+# --------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --------------------------------------
+# Virtual Environments
+# --------------------------------------
+venv/
+env/
+.venv/
+
+# --------------------------------------
+# Streamlit / Local Secrets
+# --------------------------------------
+.streamlit/cache/
+.streamlit/history/
+.streamlit/secrets.toml
+.env
+
+# --------------------------------------
+# Logs / OS Files
+# --------------------------------------
+*.log
+.DS_Store
+Thumbs.db

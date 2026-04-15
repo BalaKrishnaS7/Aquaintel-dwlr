@@ -2,6 +2,7 @@
 # Drop-in replacement file
 
 from datetime import datetime
+import os
 
 import numpy as np
 import pandas as pd
@@ -276,6 +277,21 @@ def sidebar_thresholds():
     )
     drop_thr = st.sidebar.number_input("Sudden drop detection (m)", value=2.0, step=0.1)
     return float(safe_thr), float(critical_thr), float(drop_thr)
+
+
+def get_ntfy_auth_token() -> str:
+    token = ""
+    try:
+        token = st.secrets.get("NTFY_AUTH_TOKEN", "") or st.secrets.get(
+            "ntfy_auth_token", ""
+        )
+    except Exception:
+        token = ""
+
+    if not token:
+        token = os.getenv("NTFY_AUTH_TOKEN", "")
+
+    return token.strip()
 
 
 # ===============================
@@ -1017,14 +1033,18 @@ def main():
         "ntfy Topic", value="aquaintel-3fa7b2c9", help="Use a hard-to-guess string"
     )
     ntfy_server = st.sidebar.text_input("ntfy Server", value="https://ntfy.sh")
-    ntfy_token = st.sidebar.text_input(
-        "ntfy Auth Token (optional)", value="", type="password"
-    )
+    ntfy_token = get_ntfy_auth_token()
+    if ntfy_token:
+        st.sidebar.caption("ntfy auth token loaded from local secrets or environment.")
+    else:
+        st.sidebar.info(
+            "Optional: set NTFY_AUTH_TOKEN in your environment or Streamlit secrets to enable authenticated ntfy pushes."
+        )
     st.session_state.ntfy_cfg = {
         "enabled": use_ntfy,
         "topic": ntfy_topic.strip(),
         "server": ntfy_server.strip(),
-        "token": ntfy_token.strip(),
+        "token": ntfy_token,
     }
     manual_alarm_button()
 

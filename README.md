@@ -35,3 +35,22 @@ A Streamlit app to explore and visualize DWLR sensor data.
    ```
 
 The app will open in your browser.
+
+## Security Notes
+
+If you use ntfy authentication or add any webhook-style integration later, keep the secret out of source control. The app reads `NTFY_AUTH_TOKEN` from either environment variables or Streamlit secrets, so set one of these locally instead of typing the token into the UI.
+
+Example Streamlit secrets file:
+
+```toml
+NTFY_AUTH_TOKEN = "your-token-here"
+```
+
+Or set an environment variable before running the app:
+
+```powershell
+$env:NTFY_AUTH_TOKEN = "your-token-here"
+streamlit run app.py
+```
+
+Rotate the credential after any exposure and purge logs on any receiving system that may have captured request headers.
